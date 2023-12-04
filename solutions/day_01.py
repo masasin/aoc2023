@@ -43,14 +43,15 @@ def parse(data: str, digit_extractor: Callable) -> Generator[int, None, None]:
     yield from (extract_number(digit_extractor(line)) for line in data.splitlines())
 
 
-def solve(numbers):
+def solve(numbers) -> int:
     return sum(numbers)
 
 
-numbers_p1 = parse(data, extract_digits_p1)
-answer_p1 = solve(numbers_p1)
-submit(answer_p1)
+if __name__ == "__main__":
+    numbers_p1 = parse(data, extract_digits_p1)
+    answer_p1 = solve(numbers_p1)
+    submit(answer_p1)
 
-numbers_p2 = parse(data, extract_digits_p2)
-answer_p2 = solve(numbers_p2)
-submit(answer_p2)
+    numbers_p2 = parse(data, extract_digits_p2)
+    answer_p2 = solve(numbers_p2)
+    submit(answer_p2)
