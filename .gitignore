@@ -1,0 +1,10 @@
+# pixi environments
+.pixi
+
+# environment files
+.env
+.vscode
+
+# Python
+.pytest_cache
+__pycache__
