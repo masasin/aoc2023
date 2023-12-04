@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from aocd import data
+from aocd import data, submit
 from scipy.ndimage import convolve
 import numpy as np
 
@@ -61,11 +61,28 @@ def solve_p1():
     return sum(unique_contiguous_numbers)
 
 
-if __name__ == "__main__":
-    grid = np.array(list(map(list, data.splitlines())))
-    grid = np.pad(grid, pad_width=1, mode="constant", constant_values=".")
-    num_mask = np.char.isdigit(grid)
-    answer_p1 = solve_p1()
-    print(answer_p1)
+def extract_gear_ratio(coord):
+    mask = np.full(grid.shape, False)
+    mask[tuple(coord)] = True
+    components = list(
+        extract_numbers(drop_contiguous_points(adjacent_number_coords(mask)))
+    )
+    if len(components) == 2:
+        return np.prod(components)
+    return 0
 
-# %%
+
+def solve_p2():
+    mask = gear_mask(grid)
+    gear_coords = np.argwhere(mask)
+    return sum(extract_gear_ratio(gear_coord) for gear_coord in gear_coords)
+
+
+grid = np.array(list(map(list, data.splitlines())))
+grid = np.pad(grid, pad_width=1, mode="constant", constant_values=".")
+num_mask = np.char.isdigit(grid)
+answer_p1 = solve_p1()
+submit(answer_p1, part="a")
+
+answer_p2 = solve_p2()
+submit(answer_p2, part="b")
