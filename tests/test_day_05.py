@@ -3,11 +3,16 @@ from textwrap import dedent
 import pytest
 
 from solutions.day_05 import (
-    follow_one_p1,
+    changeovers_to_mappings,
+    compose_changeovers,
+    dedup_changeovers,
+    follow_from_changeovers,
+    follow_one,
     follow_p1,
-    follow_one_p2,
+    delta_mappings,
     find_changeovers,
     find_all_changeovers,
+    invert_changeovers,
     parse_line_1_p1,
     parse_line_1_p2,
     parse_lines,
@@ -139,21 +144,79 @@ def test_parse_lines(data, parsed_maps):
         (10, 10),
     ],
 )
-def test_follow_one_p1(source, expected_dest, parsed_maps):
+def test_follow_down(source, expected_dest, parsed_maps):
     mapping = parsed_maps[(Category.SEED, Category.SOIL)]
-    assert follow_one_p1(source, mapping) == expected_dest
+    assert follow_one(source, mapping) == expected_dest
 
 
 @pytest.mark.parametrize(
-    ["sources", "expected_dests"],
+    ["dest", "expected_source"],
     [
-        (range(98, 98 + 2), range(50, 50 + 2)),
-        (range(50, 50 + 48), range(52, 52 + 48)),
+        (50, 98),
+        (51, 99),
+        (55, 53),
+        (10, 10),
     ],
 )
-def test_follow_one_p2(sources, expected_dests, parsed_maps):
+def test_follow_up(dest, expected_source, parsed_maps):
     mapping = parsed_maps[(Category.SEED, Category.SOIL)]
-    assert follow_one_p2(sources, mapping) == expected_dests
+    assert follow_one(dest, mapping, reverse=True) == expected_source
+
+
+@pytest.mark.parametrize(
+    ["source", "dest"],
+    [
+        (98, 50),
+        (99, 51),
+        (53, 55),
+        (10, 10),
+        (110, 110),
+    ],
+)
+def test_follow_from_changeovers(source, dest):
+    changeovers = {0: 0, 50: 2, 98: -48, 100: 0}
+    assert follow_from_changeovers(source, changeovers) == dest
+    assert follow_from_changeovers(dest, changeovers, reverse=True) == source
+
+
+@pytest.mark.parametrize(
+    ["original", "expected"],
+    [
+        (
+            {0: 0, 50: 2, 98: -48, 100: 0},
+            {0: 0, 50: 48, 52: -2, 100: 0},
+        ),
+        (
+            {0: 39, 15: -15, 50: -13, 52: 2, 98: -63, 100: 0},
+            {0: 15, 35: 63, 37: 13, 39: -39, 54: -2, 100: 0},
+        ),
+    ],
+)
+def test_invert_changeovers(original, expected):
+    changeovers = {0: 0, 50: 2, 98: -48, 100: 0}
+    assert invert_changeovers(changeovers) == {0: 0, 50: 48, 52: -2, 100: 0}
+
+
+def test_changeovers_to_mappings():
+    changeovers = {0: 0, 50: 2, 98: -48, 100: 0}
+    assert set(changeovers_to_mappings(changeovers)) == {
+        (range(50, 98), range(52, 100)),
+        (range(98, 100), range(50, 52)),
+    }
+
+
+@pytest.mark.parametrize(
+    ["dest", "expected_source"],
+    [
+        (50, 98),
+        (51, 99),
+        (55, 53),
+        (10, 10),
+    ],
+)
+def test_follow_up(dest, expected_source, parsed_maps):
+    mapping = parsed_maps[(Category.SEED, Category.SOIL)]
+    assert follow_one(dest, mapping, reverse=True) == expected_source
 
 
 @pytest.mark.parametrize(
@@ -170,45 +233,107 @@ def test_follow_p1(seed, expected_location, parsed_maps):
 
 
 @pytest.mark.parametrize(
-    ["starting_set", "mapping", "expected"],
+    ["source", "expected_delta"],
     [
-        (
-            set(),
-            [
-                (range(98, 98 + 2), range(50, 50 + 2)),
-                (range(50, 50 + 48), range(52, 52 + 48)),
-            ],
-            {0, 50, 98, 100},
-        )
+        (98, 50 - 98),
+        (50, 52 - 50),
     ],
 )
-def test_find_changeovers(starting_set, mapping, expected):
-    assert find_changeovers(starting_set, mapping) == expected
+def test_delta(source, expected_delta, parsed_maps):
+    mapping = parsed_maps[(Category.SEED, Category.SOIL)]
+    assert delta_mappings(source, mapping) == expected_delta
+
+
+@pytest.mark.parametrize(
+    ["target_categories", "expected"],
+    [
+        (
+            (Category.SEED, Category.SOIL),
+            {0: 0, 50: 2, 98: -48, 100: 0},
+        ),
+        (
+            (Category.SOIL, Category.FERTILIZER),
+            {0: 39, 15: -15, 54: 0},
+        ),
+        (
+            (Category.FERTILIZER, Category.WATER),
+            {0: 42, 7: 50, 11: -11, 53: -4, 61: 0},
+        ),
+    ],
+)
+def test_find_changeovers(target_categories, expected, parsed_maps):
+    assert find_changeovers(parsed_maps[target_categories]) == expected
+
+
+def test_dedup_changeovers():
+    changeovers = {0: 39, 15: -15, 52: -15, 54: 0}
+    assert dedup_changeovers(changeovers) == {0: 39, 15: -15, 54: 0}
 
 
 def test_find_all_changeovers(parsed_maps):
-    expected = {
-        0,
-        22,
-        26,
-        44,
-        50,
-        52,
-        54,
-        59,
-        62,
-        66,
-        69,
-        70,
-        71,
-        82,
-        92,
-        93,
-        98,
-        99,
-        100,
-    }
-    assert find_all_changeovers(parsed_maps) == expected
+    expected = [
+        {0: 0, 50: 2, 98: -48, 100: 0},
+        {0: 39, 15: -15, 54: 0},
+        {0: 42, 7: 50, 11: -11, 53: -4, 61: 0},
+        {0: 0, 18: 70, 25: -7, 95: 0},
+        {0: 0, 45: 36, 64: 4, 77: -32, 100: 0},
+        {0: 1, 69: -69, 70: 0},
+        {0: 0, 56: 4, 93: -37, 97: 0},
+    ]
+    assert list(find_all_changeovers(parsed_maps)) == expected
+
+
+@pytest.mark.parametrize(
+    ["changeovers", "expected"],
+    [
+        (
+            [
+                {0: 0, 50: 2, 98: -48, 100: 0},
+                {0: 39, 15: -15, 52: -15, 54: 0},
+            ],
+            {0: 39, 15: -15, 50: -13, 52: 2, 98: -63, 100: 0},
+        ),
+        (
+            [
+                {0: 39, 15: -15, 50: -13, 52: 2, 98: -63, 100: 0},
+                {0: 42, 7: 50, 11: -11, 53: -4, 61: 0},
+            ],
+            {
+                0: 28,
+                14: 35,
+                15: 27,
+                22: 35,
+                26: -26,
+                50: -24,
+                52: -2,
+                59: 2,
+                98: -74,
+                100: 0,
+            },
+        ),
+        (
+            [
+                {0: 0, 50: 2, 98: -48, 100: 0},
+                {0: 39, 15: -15, 52: -15, 54: 0},
+                {0: 42, 7: 50, 11: -11, 53: -4, 61: 0},
+            ],
+            {
+                0: 28,
+                14: 35,
+                15: 27,
+                22: 35,
+                26: -26,
+                50: -24,
+                52: -2,
+                59: 2,
+                98: -74,
+                100: 0,
+            },
+        ),
+    ],
+)
+def test_compose_changeovers(changeovers, expected):
+    assert compose_changeovers(*changeovers) == expected
 
 
 def test_solve_p1(data):
