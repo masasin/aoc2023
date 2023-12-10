@@ -1,7 +1,6 @@
 from collections import defaultdict
 import enum
-import itertools as it
-from typing import Generator, Iterable
+from typing import Generator
 
 from dotenv import load_dotenv
 
